@@ -96,10 +96,53 @@ public class PlayerDAO {
         return result;
     }
 
+    static ResultSet selectInGame() {
+        try {
+            PreparedStatement pst = con.prepareStatement("SELECT * FROM PLAYER where STATUS = ?", ResultSet.TYPE_SCROLL_INSENSITIVE, ResultSet.CONCUR_READ_ONLY);
+            pst.setString(1, "INGAME");
+            rs = pst.executeQuery();
+        } catch (SQLException ex) {
+            Logger.getLogger(PlayerDAO.class.getName()).log(Level.SEVERE, null, ex);
+        }
+        //resurlt = pst.executeQuerey();
+        return rs;
+
+    }
+
+    static ResultSet selectOnline() {
+        try {
+            PreparedStatement pst = con.prepareStatement("SELECT * FROM PLAYER where STATUS = ?", ResultSet.TYPE_SCROLL_INSENSITIVE, ResultSet.CONCUR_READ_ONLY);
+            pst.setString(1, "ONLINE");
+            rs = pst.executeQuery();
+        } catch (SQLException ex) {
+            Logger.getLogger(PlayerDAO.class.getName()).log(Level.SEVERE, null, ex);
+        }
+        //resurlt = pst.executeQuerey();
+        return rs;
+
+    }
+
+    static ResultSet selectOffline() {
+        try {
+            PreparedStatement pst = con.prepareStatement("SELECT * FROM PLAYER where STATUS = ?", ResultSet.TYPE_SCROLL_INSENSITIVE, ResultSet.CONCUR_READ_ONLY);
+            pst.setString(1, "OFFLINE");
+            rs = pst.executeQuery();
+        } catch (SQLException ex) {
+            Logger.getLogger(PlayerDAO.class.getName()).log(Level.SEVERE, null, ex);
+        }
+        //resurlt = pst.executeQuerey();
+        return rs;
+
+    }
     
 
 }
 
+enum Status {
+    ONLINE,
+    INGAME,
+    OFFLINE
+}
 
 /*
 class GameDTO {
