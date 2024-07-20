@@ -9,18 +9,18 @@ package xoserver;
  *
  * @author COMPUMARTS
  */
-
-
 /**
  *
  * @author COMPUMARTS
  */
 import DTOS.PlayerDTO;
+import DTOS.Status;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.util.Vector;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import org.apache.derby.jdbc.ClientDriver;
@@ -41,14 +41,10 @@ public class PlayerDAO {
             con = DriverManager.getConnection("jdbc:derby://localhost:1527/Player", "root", "root");
 
         } catch (SQLException ex) {
-            Logger.getLogger(FXMLDocumentBase.class.getName()).log(Level.SEVERE, null, ex);
+                ex.printStackTrace();   
         }
     }
 
-    
-    
-    
-    
     static int delete(PlayerDTO p) {
         try {
 
@@ -57,16 +53,16 @@ public class PlayerDAO {
             result = pst.executeUpdate();
 
         } catch (SQLException ex) {
-            Logger.getLogger(PlayerDTO.class.getName()).log(Level.SEVERE, null, ex);
+                   ex.printStackTrace();
         }
         return result;
     }
 
     static int insert(PlayerDTO p) {
         try {
-            //int result;
+            
             PreparedStatement pst = con.prepareStatement("INSERT INTO PLAYER VALUES (?,?,?,?,?)");
-            //pst.setInt(1, p.id);
+            pst.setInt(1, p.id);
             pst.setString(1, p.userName);
             pst.setString(2, p.status.toString());
             pst.setString(3, p.password);
@@ -74,11 +70,10 @@ public class PlayerDAO {
 
             result = pst.executeUpdate();
         } catch (SQLException ex) {
-            Logger.getLogger(PlayerDTO.class.getName()).log(Level.SEVERE, null, ex);
+            ex.printStackTrace();
         }
-        return result;
-    }
-
+        return result;
+    }
 
     static int update(PlayerDTO p) {
         try {
@@ -91,7 +86,7 @@ public class PlayerDAO {
             result = pst.executeUpdate();
 
         } catch (SQLException ex) {
-            Logger.getLogger(PlayerDTO.class.getName()).log(Level.SEVERE, null, ex);
+                    ex.printStackTrace(); 
         }
         return result;
     }
@@ -102,9 +97,9 @@ public class PlayerDAO {
             pst.setString(1, "INGAME");
             rs = pst.executeQuery();
         } catch (SQLException ex) {
-            Logger.getLogger(PlayerDAO.class.getName()).log(Level.SEVERE, null, ex);
+            ex.printStackTrace();
         }
-        //resurlt = pst.executeQuerey();
+       
         return rs;
 
     }
@@ -128,29 +123,68 @@ public class PlayerDAO {
             pst.setString(1, "OFFLINE");
             rs = pst.executeQuery();
         } catch (SQLException ex) {
-            Logger.getLogger(PlayerDAO.class.getName()).log(Level.SEVERE, null, ex);
+            ex.printStackTrace();
         }
-        //resurlt = pst.executeQuerey();
+        
         return rs;
 
     }
+
+    public static ResultSet selectAll() {
+        try {
+            PreparedStatement pst = con.prepareStatement("SELECT * FROM PLAYER",
+                    ResultSet.TYPE_SCROLL_INSENSITIVE, ResultSet.CONCUR_READ_ONLY);
+            rs = pst.executeQuery();
+        } catch (SQLException ex) {
+            ex.printStackTrace();
+        }
+        
+        return rs;
+
+    }
+
     
+   public static ResultSet select(int id) {
+        try {
+            PreparedStatement pst = con.prepareStatement("SELECT * FROM PLAYER WHERE ID = ?", 
+                    ResultSet.TYPE_SCROLL_INSENSITIVE, ResultSet.CONCUR_READ_ONLY);
+            pst.setInt(1, id);
+            rs = pst.executeQuery();
+        } catch (SQLException ex) {
+            ex.printStackTrace();
+        }
+        
+        return rs;
+    }
+
+    
+   public static int updateStatus(int id,String status) {
+        try {
+            PreparedStatement pst = con.prepareStatement("UPDATE PLAYER SET  STATUS = ? WHERE ID = ?",
+                    ResultSet.TYPE_SCROLL_INSENSITIVE, ResultSet.CONCUR_UPDATABLE);
+            pst.setString(1, status);
+            pst.setInt(2, id);
+            result = pst.executeUpdate();
+        } catch (SQLException ex) {
+            ex.printStackTrace();
+        }
+        
+        return result;
+    }
+
+    public int updatePoints(int points,int id) {
+         try {
+            PreparedStatement pst = con.prepareStatement("UPDATE PLAYER SET  POINTS = ? WHERE ID = ?",
+                    ResultSet.TYPE_SCROLL_INSENSITIVE, ResultSet.CONCUR_UPDATABLE);
+            pst.setInt(1, points);
+            pst.setInt(2, id);
+            result = pst.executeUpdate();
+        } catch (SQLException ex) {
+            ex.printStackTrace();
+        }
+        
+        return result;
+        
+    }
 
 }
-
-enum Status {
-    ONLINE,
-    INGAME,
-    OFFLINE
-}
-
-/*
-class GameDTO {
-
-    int id;
-    String userNamePlayerOne;
-    String userNamePlayerTwo;
-    String status;
-}
-*/
-

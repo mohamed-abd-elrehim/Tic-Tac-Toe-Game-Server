@@ -5,21 +5,13 @@
  */
 package DTOS;
 
-import java.util.Vector;
-
 /**
  *
- * @author Mohammed
+ * @author Smart
  */
-
-
-public class PlayerDTO {
-   public int id;
-   public int points;
-   public String userName;
-   public String password;
-   public Status status ;
-   
+public class GameDTO {
+     int id;
+    String userNamePlayerOne;
+    String userNamePlayerTwo;
+    Status status;
 }
-
-
