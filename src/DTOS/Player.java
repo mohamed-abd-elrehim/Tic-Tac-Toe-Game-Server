@@ -13,7 +13,7 @@ import java.util.Vector;
  */
 
 
-public class PlayerDTO {
+public class Player {
    public int id;
    public int points;
    public String userName;

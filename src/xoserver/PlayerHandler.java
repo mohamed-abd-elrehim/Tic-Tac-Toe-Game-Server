@@ -9,6 +9,8 @@ package xoserver;
  *
  * @author COMPUMARTS
  */
+import DTOS.Player;
+import DTOS.Response;
 import java.io.DataInputStream;
 import java.io.IOException;
 import java.io.PrintStream;
@@ -36,7 +38,20 @@ public class PlayerHandler extends Thread {
         }
         start();
     }
+    
+      private Response loginPlayer(Player player) {
 
+        boolean loginSuccess = PlayerDAO.isUserLoggedin(player);
+        System.out.println(player.toString());
+        if (loginSuccess) {
+            System.out.println("Login Successful");
+            return new Response(true, "Login successful", player);
+
+        } else {
+            System.out.println("Login failed");
+            return new Response(false, "Login failed", player);
+        }
+    }
     @Override
     public void run() {
         while (true) {

@@ -13,16 +13,14 @@ package xoserver;
  *
  * @author COMPUMARTS
  */
-import DTOS.PlayerDTO;
+import DTOS.Player;
 import DTOS.Status;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.util.Vector;
-import java.util.logging.Level;
-import java.util.logging.Logger;
+
 import org.apache.derby.jdbc.ClientDriver;
 
 /**
@@ -45,7 +43,40 @@ public class PlayerDAO {
         }
     }
 
-    static int delete(PlayerDTO p) {
+    static boolean selectLogin(Player p) {
+        boolean isLoggedIn = false;
+        ResultSet rs = null;
+        try {
+            //System.out.println("Attempting login with: " + p.toString());
+            // String query = "SELECT * FROM PLAYER WHERE USERNAME = ? AND PASSWORD = ?";
+            PreparedStatement pst = con.prepareStatement("SELECT * FROM PLAYER WHERE USERNAME = ? AND PASSWORD = ?", ResultSet.TYPE_SCROLL_INSENSITIVE, ResultSet.CONCUR_READ_ONLY);
+            //System.out.println("Query: " + query);
+            pst.setString(1, p.userName.trim());
+            pst.setString(2, p.password.trim());
+            //System.out.println("PreparedStatement: " + pst.toString());
+            rs = pst.executeQuery();
+            if (!rs.next()) {
+                System.out.println("No matching user found.");
+            } else {
+                //System.out.println("Username: " + rs.getString("USERNAME") + "  Password: " + rs.getString("PASSWORD"));
+                p.id = rs.getInt("ID");
+                p.points = rs.getInt("POINTS");
+                p.status = Status.ONLINE;
+                updateStatus(p.id,p.status.toString());
+                System.out.println(p.toString());
+                isLoggedIn = true;
+            }
+
+        } catch (SQLException ex) {
+        }
+        return isLoggedIn;
+    }
+
+    static boolean isUserLoggedin(Player p) {
+        return selectLogin(p);
+    } 
+    
+    static int delete(Player p) {
         try {
 
             PreparedStatement pst = con.prepareStatement("delete from PLAYER where ID = ?");
@@ -58,7 +89,7 @@ public class PlayerDAO {
         return result;
     }
 
-    static int insert(PlayerDTO p) {
+    static int insert(Player p) {
         try {
             
             PreparedStatement pst = con.prepareStatement("INSERT INTO PLAYER VALUES (?,?,?,?,?)");
@@ -75,7 +106,7 @@ public class PlayerDAO {
         return result;
     }
 
-    static int update(PlayerDTO p) {
+    static int update(Player p) {
         try {
             PreparedStatement pst = con.prepareStatement("UPDATE PLAYER SET USERNAME = ?, STATUS = ?, PASSWORD = ?, POINTS = ? WHERE ID = ?");
             pst.setString(1, p.userName);
@@ -93,7 +124,8 @@ public class PlayerDAO {
 
     static ResultSet selectInGame() {
         try {
-            PreparedStatement pst = con.prepareStatement("SELECT * FROM PLAYER where STATUS = ?", ResultSet.TYPE_SCROLL_INSENSITIVE, ResultSet.CONCUR_READ_ONLY);
+            PreparedStatement pst = con.prepareStatement("SELECT * FROM PLAYER where STATUS = ?",
+                    ResultSet.TYPE_SCROLL_INSENSITIVE, ResultSet.CONCUR_READ_ONLY);
             pst.setString(1, "INGAME");
             rs = pst.executeQuery();
         } catch (SQLException ex) {
@@ -106,13 +138,14 @@ public class PlayerDAO {
 
     static ResultSet selectOnline() {
         try {
-            PreparedStatement pst = con.prepareStatement("SELECT * FROM PLAYER where STATUS = ?", ResultSet.TYPE_SCROLL_INSENSITIVE, ResultSet.CONCUR_READ_ONLY);
+            PreparedStatement pst = con.prepareStatement("SELECT * FROM PLAYER where STATUS = ?", 
+                    ResultSet.TYPE_SCROLL_INSENSITIVE, ResultSet.CONCUR_READ_ONLY);
             pst.setString(1, "ONLINE");
             rs = pst.executeQuery();
         } catch (SQLException ex) {
-            Logger.getLogger(PlayerDAO.class.getName()).log(Level.SEVERE, null, ex);
+                   ex.printStackTrace();
         }
-        //resurlt = pst.executeQuerey();
+        
         return rs;
 
     }
