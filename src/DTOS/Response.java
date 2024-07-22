@@ -7,18 +7,11 @@ package DTOS;
 
 /**
  *
-<<<<<<< HEAD
  * @author COMPUMARTS
  */
 
 public class Response {
     public boolean isDone;
-=======
- * @author Smart
- */
-public class Response {
-     public boolean isDone;
->>>>>>> e4d8fb212146b3eb0568555f03d84d9b43a38d8f
     public String message;
     public Player player;
 

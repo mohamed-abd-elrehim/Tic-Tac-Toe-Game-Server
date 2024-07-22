@@ -13,7 +13,7 @@ import javafx.stage.Stage;
 
 /**
  *
- * @author Kareem Ashraf
+ * @author COMPUMARTS
  */
 public class XOServer extends Application {
     

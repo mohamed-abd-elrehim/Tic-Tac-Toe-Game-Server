@@ -1,17 +1,7 @@
 package xoserver;
 
-<<<<<<< HEAD
 import com.google.gson.Gson;
 import com.google.gson.JsonSyntaxException;
-=======
-/**
- *
- * @author COMPUMARTS
- */
-import DTOS.Player;
-import DTOS.Response;
-import java.io.DataInputStream;
->>>>>>> e4d8fb212146b3eb0568555f03d84d9b43a38d8f
 import java.io.IOException;
 import java.net.Socket;
 import DTOS.*;
@@ -40,20 +30,7 @@ public class PlayerHandler extends Thread {
         this.gson = new Gson();
         start();
     }
-    
-      private Response loginPlayer(Player player) {
 
-        boolean loginSuccess = PlayerDAO.isUserLoggedin(player);
-        System.out.println(player.toString());
-        if (loginSuccess) {
-            System.out.println("Login Successful");
-            return new Response(true, "Login successful", player);
-
-        } else {
-            System.out.println("Login failed");
-            return new Response(false, "Login failed", player);
-        }
-    }
     @Override
     public void run() {
         try {
@@ -96,7 +73,7 @@ public class PlayerHandler extends Thread {
 
     private Response loginPlayer(Player player) {
 
-        boolean loginSuccess = KareemAshraf.isUserLoggedin(player);
+        boolean loginSuccess = PlayerDAO.isUserLoggedin(player);
         System.out.println(player.toString());
         if (loginSuccess) {
             System.out.println("Login Successful");
@@ -110,9 +87,9 @@ public class PlayerHandler extends Thread {
 
     private Response registerPlayer(Player player) {
 
-        boolean isDuplicate = KareemAshraf.isUserNameTaken(player);
+        boolean isDuplicate = PlayerDAO.isUserNameTaken(player);
         if (!isDuplicate) {
-            boolean registerSuccess = KareemAshraf.insert(player);
+            boolean registerSuccess = PlayerDAO.insert(player);
             if (registerSuccess) {
                 System.out.println("Register successful");
                 return new Response(true, "Registration successful", player);
@@ -137,7 +114,7 @@ public class PlayerHandler extends Thread {
         try {
             ResultSet rs = null;
 
-            rs = KareemAshraf.selectOnline();
+            rs = PlayerDAO.selectOnline();
             while (rs.next()) {
                 Player p = new Player();
                 p.setId(rs.getInt("ID"));
@@ -157,7 +134,7 @@ public class PlayerHandler extends Thread {
         try {
             ResultSet rs = null;
 
-            rs = KareemAshraf.selectOnline();
+            rs = PlayerDAO.selectOnline();
             while (rs.next()) {
                 Player p = new Player();
                 p.setId(rs.getInt("ID"));

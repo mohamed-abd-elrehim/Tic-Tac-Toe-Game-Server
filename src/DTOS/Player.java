@@ -5,11 +5,7 @@
  */
 package DTOS;
 
-<<<<<<< HEAD
 import enumstatus.EnumStatus.Status;
-=======
-import java.util.Vector;
->>>>>>> e4d8fb212146b3eb0568555f03d84d9b43a38d8f
 
 /**
  *
@@ -17,7 +13,6 @@ import java.util.Vector;
  */
 
 
-<<<<<<< HEAD
     public class Player {
         public int id;
         public String userName;
@@ -25,13 +20,13 @@ import java.util.Vector;
         public String password;
         public int points;
         public String action;
-        public String message; 
+        public String message; // For chat messages
 
-        
+        // Default constructor for Gson
         public Player() {
         }
 
-        
+        // Parameterized constructor
         public Player(int id, String userName, Status status, String password, int points, String action, String message) {
             this.id = id;
             this.userName = userName;
@@ -42,7 +37,7 @@ import java.util.Vector;
             this.message = message;
         }
 
-        
+        // Getter and Setter methods
         public int getId() {
             return id;
         }
@@ -112,15 +107,4 @@ import java.util.Vector;
                     '}';
         }
     }
-=======
-public class Player {
-   public int id;
-   public int points;
-   public String userName;
-   public String password;
-   public Status status ;
-   
-}
-
->>>>>>> e4d8fb212146b3eb0568555f03d84d9b43a38d8f
 

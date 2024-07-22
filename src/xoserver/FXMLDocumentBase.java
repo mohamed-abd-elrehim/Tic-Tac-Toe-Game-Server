@@ -43,15 +43,15 @@ public class FXMLDocumentBase extends BorderPane {
     public FXMLDocumentBase(Stage stage) {
 
         label = new Label();
-        newLabel = new Label(); 
+        newLabel = new Label(); // New label component
         flowPane = new FlowPane();
         startBtn = new Button();
         categoryAxis = new CategoryAxis();
         numberAxis = new NumberAxis();
         playersChart = new BarChart<>(categoryAxis, numberAxis);
-        playersInGame = KareemAshraf.getIngameNumber();
-        playersOffline = KareemAshraf.getOfflineNumber();
-        playersOnline = KareemAshraf.getOnlineNumber();
+        playersInGame = PlayerDAO.getIngameNumber();
+        playersOffline = PlayerDAO.getOfflineNumber();
+        playersOnline = PlayerDAO.getOnlineNumber();
         startFlag = false;
         categoryAxis.setLabel("Status");
         numberAxis.setLabel("No of Players");
@@ -94,15 +94,15 @@ public class FXMLDocumentBase extends BorderPane {
         newLabel.setAlignment(javafx.geometry.Pos.CENTER);
         newLabel.setPrefHeight(50.0);
         newLabel.setPrefWidth(400.0);
-        newLabel.setText("IP Address: " + getLocalIPAddress());
+        newLabel.setText("IP Address: "+getLocalIPAddress());
         newLabel.setTextAlignment(javafx.scene.text.TextAlignment.LEFT);
         newLabel.setFont(new Font("Arial", 20.0));
-        newLabel.setPadding(new Insets(10, 0, 0, 0)); 
+        newLabel.setPadding(new Insets(10, 0, 0, 0)); // Add some padding to position it nicely
 
         VBox topContainer = new VBox();
         topContainer.getChildren().addAll(label, newLabel);
         topContainer.setAlignment(javafx.geometry.Pos.CENTER);
-        topContainer.setSpacing(10); 
+        topContainer.setSpacing(10); // Optional: add spacing between labels
         setTop(topContainer);
 
         BorderPane.setAlignment(flowPane, javafx.geometry.Pos.CENTER);
@@ -136,7 +136,7 @@ public class FXMLDocumentBase extends BorderPane {
             } catch (IOException ex) {
                 System.out.println("To do in the setOncloseReqest");
             }
-           
+            // Optional: Add additional cleanup code here
         });
 
         flowPane.getChildren().add(startBtn);
@@ -152,6 +152,8 @@ public class FXMLDocumentBase extends BorderPane {
                             System.out.println("New Client");
                             new PlayerHandler(s);
                             Platform.runLater(() -> {
+                                // Your UI update logic here
+                                //label.setText("New client connected: " + s.getInetAddress().getHostAddress());
                                 updateChart();
                             });
                         }
@@ -177,9 +179,9 @@ public class FXMLDocumentBase extends BorderPane {
     }
 
     private void updateChart() {
-        playersInGame = KareemAshraf.getIngameNumber();
-        playersOffline = KareemAshraf.getOfflineNumber();
-        playersOnline = KareemAshraf.getOnlineNumber();
+        playersInGame = PlayerDAO.getIngameNumber();
+        playersOffline = PlayerDAO.getOfflineNumber();
+        playersOnline = PlayerDAO.getOnlineNumber();
         XYChart.Series<String, Number> series1 = new XYChart.Series<>();
         series1.setName("Offline");
         series1.getData().add(new XYChart.Data<>("online", 0));
@@ -199,11 +201,9 @@ public class FXMLDocumentBase extends BorderPane {
         series3.getData().add(new XYChart.Data<>("in a game", 0));
 
         playersChart.getData().clear();
-        playersChart.setCategoryGap(80);
-        playersChart.setBarGap(5);
         playersChart.getData().addAll(series1, series2, series3);
     }
-
+    
     private String getLocalIPAddress() {
         try {
             InetAddress localHost = InetAddress.getLocalHost();
