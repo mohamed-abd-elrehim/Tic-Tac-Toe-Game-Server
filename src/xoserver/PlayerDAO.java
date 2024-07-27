@@ -45,7 +45,7 @@ public class PlayerDAO {
         }
     }
 
-    static boolean delete(Player p) {
+    static synchronized boolean delete(Player p) {
         try {
 
             PreparedStatement pst = con.prepareStatement("delete from PLAYER where ID = ?");
@@ -63,7 +63,7 @@ public class PlayerDAO {
         return isDone;
     }
 
-    static boolean insert(Player p) {
+    static synchronized boolean insert(Player p) {
         try {
             //int result;
             PreparedStatement pst = con.prepareStatement("INSERT INTO PLAYER (userName, status, password, points) VALUES (?, ?, ?, ?)");
@@ -85,7 +85,7 @@ public class PlayerDAO {
         return isDone;
     }
 
-    static boolean update(Player p) {
+    static synchronized boolean update(Player p) {
         try {
             PreparedStatement pst = con.prepareStatement("UPDATE PLAYER SET USERNAME = ?, STATUS = ?, PASSWORD = ?, POINTS = ? WHERE ID = ?");
             pst.setString(1, p.userName);
@@ -106,7 +106,7 @@ public class PlayerDAO {
         return isDone;
     }
 
-    static ResultSet selectInGame() {
+    static synchronized ResultSet selectInGame() {
         try {
             PreparedStatement pst = con.prepareStatement("SELECT * FROM PLAYER where STATUS = ?", ResultSet.TYPE_SCROLL_INSENSITIVE, ResultSet.CONCUR_READ_ONLY);
             pst.setString(1, "INGAME");
@@ -119,7 +119,7 @@ public class PlayerDAO {
 
     }
 
-    static ResultSet selectOnline() {
+    static synchronized ResultSet selectOnline() {
         try {
             PreparedStatement pst = con.prepareStatement("SELECT * FROM PLAYER where STATUS = ?", ResultSet.TYPE_SCROLL_INSENSITIVE, ResultSet.CONCUR_READ_ONLY);
             pst.setString(1, "ONLINE");
@@ -132,7 +132,7 @@ public class PlayerDAO {
 
     }
 
-    static ResultSet selectOffline() {
+    static synchronized ResultSet selectOffline() {
         try {
             PreparedStatement pst = con.prepareStatement("SELECT * FROM PLAYER where STATUS = ?", ResultSet.TYPE_SCROLL_INSENSITIVE, ResultSet.CONCUR_READ_ONLY);
             pst.setString(1, "OFFLINE");
@@ -145,7 +145,7 @@ public class PlayerDAO {
 
     }
 
-    static ResultSet selectAll() {
+    static synchronized ResultSet selectAll() {
         try {
             PreparedStatement pst = con.prepareStatement("SELECT * FROM PLAYER", ResultSet.TYPE_SCROLL_INSENSITIVE, ResultSet.CONCUR_READ_ONLY);
 
@@ -156,7 +156,7 @@ public class PlayerDAO {
         return rs;
     }
 
-    static ResultSet select(Player p) {
+    static synchronized ResultSet select(Player p) {
         try {
             PreparedStatement pst = con.prepareStatement("SELECT * FROM PLAYER where id = ?", ResultSet.TYPE_SCROLL_INSENSITIVE, ResultSet.CONCUR_READ_ONLY);
             pst.setInt(1, p.id);
@@ -168,12 +168,12 @@ public class PlayerDAO {
         return rs;
     }
 
-    static int updateStatus(Player p) {
+    static synchronized int updateStatus(Player p, Status status) {
         try {
             PreparedStatement pst
                     = con.prepareStatement("UPDATE PLAYER SET STATUS = ? WHERE ID = ?");
 
-            pst.setString(1, String.valueOf(p.status));
+            pst.setString(1, String.valueOf(status));
             pst.setInt(2, p.id);
             result = pst.executeUpdate();
 
@@ -183,7 +183,17 @@ public class PlayerDAO {
         return result;
     }
 
-    static int updatePoints(Player p) {
+    static synchronized boolean isStatusUpdated(Player p, Status status) {
+        int updateResult = updateStatus(p, status);
+        if (updateResult <= 0) {
+            return false;
+        } else {
+            return true;
+        }
+
+    }
+
+    static synchronized int updatePoints(Player p) {
         try {
             PreparedStatement pst
                     = con.prepareStatement("UPDATE PLAYER SET POINTS = ? WHERE ID = ?");
@@ -198,7 +208,17 @@ public class PlayerDAO {
         return result;
     }
 
-    static boolean selectLogin(Player p) {
+    static synchronized boolean isPointsUpdated(Player p) {
+        int updateResult = updatePoints(p);
+        if (updateResult <= 0) {
+            return false;
+        } else {
+            return true;
+        }
+
+    }
+
+    static synchronized boolean selectLogin(Player p) {
         boolean isLoggedIn = false;
         ResultSet rs = null;
         try {
@@ -216,8 +236,7 @@ public class PlayerDAO {
                 //System.out.println("Username: " + rs.getString("USERNAME") + "  Password: " + rs.getString("PASSWORD"));
                 p.id = rs.getInt("ID");
                 p.points = rs.getInt("POINTS");
-                p.status = Status.ONLINE;
-                updateStatus(p);
+                updateStatus(p, Status.ONLINE);
                 System.out.println(p.toString());
                 isLoggedIn = true;
             }
@@ -228,11 +247,11 @@ public class PlayerDAO {
         return isLoggedIn;
     }
 
-    static boolean isUserLoggedin(Player p) {
+    static synchronized boolean isUserLoggedin(Player p) {
         return selectLogin(p);
     }
 
-    static boolean isUserNameTaken(Player p) {
+    static synchronized boolean isUserNameTaken(Player p) {
         boolean isTaken = true;
         try {
             PreparedStatement pst = con.prepareStatement("SELECT * FROM PLAYER WHERE USERNAME = ?", ResultSet.TYPE_SCROLL_INSENSITIVE, ResultSet.CONCUR_READ_ONLY);
@@ -249,11 +268,11 @@ public class PlayerDAO {
         return isTaken;
     }
 
-    static int getIngameNumber() {
+    static synchronized int getIngameNumber() {
         int count = 0;
         try {
 
-            PreparedStatement pst = con.prepareStatement("SELECT COUNT(*) FROM player WHERE status = ?", ResultSet.TYPE_SCROLL_INSENSITIVE, ResultSet.CONCUR_READ_ONLY);
+            PreparedStatement pst = con.prepareStatement("SELECT COUNT(*) FROM player WHERE status = ?", ResultSet.TYPE_SCROLL_SENSITIVE, ResultSet.CONCUR_READ_ONLY);
             pst.setString(1, "INGAME");
             rs = pst.executeQuery();
             if (rs.next()) {
@@ -272,7 +291,7 @@ public class PlayerDAO {
         int count = 0;
         try {
 
-            PreparedStatement pst = con.prepareStatement("SELECT COUNT(*) FROM player WHERE status = ?", ResultSet.TYPE_SCROLL_INSENSITIVE, ResultSet.CONCUR_READ_ONLY);
+            PreparedStatement pst = con.prepareStatement("SELECT COUNT(*) FROM player WHERE status = ?", ResultSet.TYPE_SCROLL_SENSITIVE, ResultSet.CONCUR_READ_ONLY);
             pst.setString(1, "OFFLINE");
             rs = pst.executeQuery();
             if (rs.next()) {
@@ -294,7 +313,7 @@ public class PlayerDAO {
         int count = 0;
         try {
 
-            PreparedStatement pst = con.prepareStatement("SELECT COUNT(*) FROM player WHERE status = ?", ResultSet.TYPE_SCROLL_INSENSITIVE, ResultSet.CONCUR_READ_ONLY);
+            PreparedStatement pst = con.prepareStatement("SELECT COUNT(*) FROM player WHERE status = ?", ResultSet.TYPE_SCROLL_SENSITIVE, ResultSet.CONCUR_READ_ONLY);
             pst.setString(1, "ONLINE");
             rs = pst.executeQuery();
             if (rs.next()) {
@@ -310,6 +329,22 @@ public class PlayerDAO {
         }
 
         return count;
+    }
+
+    static void logOutAllPlayers() {
+        try {
+            PreparedStatement pst = con.prepareStatement("SELECT * FROM player WHERE status = ?", ResultSet.TYPE_SCROLL_INSENSITIVE, ResultSet.CONCUR_READ_ONLY);
+            pst.setString(1, "ONLINE");
+            rs = pst.executeQuery();
+            while (rs.next()) {
+                 pst = con.prepareStatement("UPDATE PLAYER SET STATUS = ? WHERE ID = ?");
+                pst.setString(1, String.valueOf(Status.OFFLINE));
+                pst.setInt(2, rs.getInt("ID"));
+                result = pst.executeUpdate();
+            }
+        } catch (SQLException ex) {
+            Logger.getLogger(PlayerDAO.class.getName()).log(Level.SEVERE, null, ex);
+        }
     }
 
 }

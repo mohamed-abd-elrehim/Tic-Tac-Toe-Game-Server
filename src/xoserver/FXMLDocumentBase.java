@@ -1,17 +1,22 @@
 package xoserver;
 
+import DTOS.Response;
+import com.google.gson.Gson;
+import java.io.BufferedWriter;
 import java.io.IOException;
+import java.io.OutputStreamWriter;
+import java.net.InetAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.ArrayList;
 import java.util.List;
-import java.net.InetAddress;
-import java.util.logging.Level;
-import java.util.logging.Logger;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import javafx.application.Platform;
 import javafx.event.ActionEvent;
 import javafx.geometry.Insets;
-import javafx.scene.Cursor;
 import javafx.scene.chart.BarChart;
 import javafx.scene.chart.CategoryAxis;
 import javafx.scene.chart.NumberAxis;
@@ -21,195 +26,251 @@ import javafx.scene.control.Label;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.FlowPane;
 import javafx.scene.layout.VBox;
+import javafx.scene.paint.Color;
 import javafx.scene.text.Font;
 import javafx.stage.Stage;
+import static xoserver.PlayerDAO.logOutAllPlayers;
+import static xoserver.PlayerHandler.onlinePlayers;
 
 public class FXMLDocumentBase extends BorderPane {
 
-    protected final Label label;
-    protected final Label newLabel;
-    protected final FlowPane flowPane;
-    protected final Button startBtn;
-    protected final CategoryAxis categoryAxis;
-    protected final NumberAxis numberAxis;
-    protected final BarChart<String, Number> playersChart;
+    // Constants and fields
+    private static final int SERVER_PORT = 5006;
+    private static final int THREAD_POOL_SIZE = 50;
     private final List<PlayerHandler> players = new ArrayList<>();
-    ServerSocket serverSocket;
-    boolean startFlag;
-    int playersOnline;
-    int playersOffline;
-    int playersInGame;
+    private ServerSocket serverSocket;
+    private boolean startFlag;
+    private ExecutorService executorService;
+    // UI Components
+    private final CategoryAxis categoryAxis;
+    private final NumberAxis numberAxis;
+    private final BarChart<String, Number> playersChart;
+    private final Label onlinePlayersLabel;
+    private final Label offlinePlayersLabel;
+    private final Label inGamePlayersLabel;
+    private final Label titleLabel;
+    private final Label ipAddressLabel;
+    private final FlowPane actionPane;
+    private final Button startButton;
 
     public FXMLDocumentBase(Stage stage) {
+        // Initialize UI elements
+        titleLabel = new Label("Tic Tac Toe Server");
+        ipAddressLabel = new Label("IP Address: " + getLocalIPAddress());
+        actionPane = new FlowPane();
+        startButton = new Button("Start");
 
-        label = new Label();
-        newLabel = new Label(); // New label component
-        flowPane = new FlowPane();
-        startBtn = new Button();
         categoryAxis = new CategoryAxis();
         numberAxis = new NumberAxis();
         playersChart = new BarChart<>(categoryAxis, numberAxis);
-        playersInGame = PlayerDAO.getIngameNumber();
-        playersOffline = PlayerDAO.getOfflineNumber();
-        playersOnline = PlayerDAO.getOnlineNumber();
-        startFlag = false;
+
+        onlinePlayersLabel = new Label("Online Players: 0");
+        offlinePlayersLabel = new Label("Offline Players: 0");
+        inGamePlayersLabel = new Label("In-Game Players: 0");
+
+        // Style and set properties
+        styleUIComponents();
+        setButtonActions(stage);
+
+        // Layout setup
+        setupLayout(stage);
+    }
+
+    private void styleUIComponents() {
+        // Styles for UI components
+        titleLabel.setFont(new Font("Arial Black", 18.0));
+        titleLabel.setTextFill(Color.web("#333333"));
+        titleLabel.setStyle("-fx-background-color: #f0f0f0; -fx-padding: 10px;");
+        ipAddressLabel.setFont(new Font("Arial", 16.0));
+        ipAddressLabel.setTextFill(Color.web("#666666"));
+
+        // Button styles
+        startButton.setStyle("-fx-background-color: #4CAF50; -fx-text-fill: white; -fx-font-size: 16px; -fx-padding: 10px; -fx-border-radius: 5px;");
+        startButton.setOnMouseEntered(event -> startButton.setStyle("-fx-background-color: #45a049; -fx-text-fill: white; -fx-font-size: 16px; -fx-padding: 10px; -fx-border-radius: 5px;"));
+        startButton.setOnMouseExited(event -> startButton.setStyle("-fx-background-color: #4CAF50; -fx-text-fill: white; -fx-font-size: 16px; -fx-padding: 10px; -fx-border-radius: 5px;"));
+
+        // Chart setup
         categoryAxis.setLabel("Status");
-        numberAxis.setLabel("No of Players");
-
-        XYChart.Series<String, Number> series1 = new XYChart.Series<>();
-        series1.setName("Offline");
-        series1.getData().add(new XYChart.Data<>("online", 0));
-        series1.getData().add(new XYChart.Data<>("offline", playersOffline));
-        series1.getData().add(new XYChart.Data<>("in a game", 0));
-        XYChart.Series<String, Number> series2 = new XYChart.Series<>();
-        series2.setName("in a game");
-        series2.getData().add(new XYChart.Data<>("online", 0));
-        series2.getData().add(new XYChart.Data<>("offline", playersInGame));
-        series2.getData().add(new XYChart.Data<>("in a game", 0));
-        XYChart.Series<String, Number> series3 = new XYChart.Series<>();
-        series3.setName("Online");
-        series3.getData().add(new XYChart.Data<>("online", 0));
-        series3.getData().add(new XYChart.Data<>("offline", playersOnline));
-        series3.getData().add(new XYChart.Data<>("in a game", 0));
-        playersChart.setCategoryGap(80);
-        playersChart.setBarGap(5);
-        playersChart.getData().addAll(series1, series2, series3);
-
-        setMaxHeight(USE_PREF_SIZE);
-        setMaxWidth(USE_PREF_SIZE);
-        setMinHeight(USE_PREF_SIZE);
-        setMinWidth(USE_PREF_SIZE);
-        setPrefHeight(400.0);
-        setPrefWidth(600.0);
-
-        BorderPane.setAlignment(label, javafx.geometry.Pos.CENTER);
-        label.setAlignment(javafx.geometry.Pos.CENTER);
-        label.setPrefHeight(108.0);
-        label.setPrefWidth(206.0);
-        label.setText("Tic Tac Toe Server");
-        label.setTextAlignment(javafx.scene.text.TextAlignment.CENTER);
-        label.setFont(new Font("Arial Black", 18.0));
-
-        BorderPane.setAlignment(newLabel, javafx.geometry.Pos.CENTER);
-        newLabel.setAlignment(javafx.geometry.Pos.CENTER);
-        newLabel.setPrefHeight(50.0);
-        newLabel.setPrefWidth(400.0);
-        newLabel.setText("IP Address: "+getLocalIPAddress());
-        newLabel.setTextAlignment(javafx.scene.text.TextAlignment.LEFT);
-        newLabel.setFont(new Font("Arial", 20.0));
-        newLabel.setPadding(new Insets(10, 0, 0, 0)); // Add some padding to position it nicely
-
-        VBox topContainer = new VBox();
-        topContainer.getChildren().addAll(label, newLabel);
-        topContainer.setAlignment(javafx.geometry.Pos.CENTER);
-        topContainer.setSpacing(10); // Optional: add spacing between labels
-        setTop(topContainer);
-
-        BorderPane.setAlignment(flowPane, javafx.geometry.Pos.CENTER);
-        flowPane.setPrefHeight(108.0);
-        flowPane.setPrefWidth(600.0);
-
-        startBtn.setAlignment(javafx.geometry.Pos.CENTER);
-        startBtn.setContentDisplay(javafx.scene.control.ContentDisplay.CENTER);
-        startBtn.setMnemonicParsing(false);
-        startBtn.setPrefHeight(66.0);
-        startBtn.setPrefWidth(192.0);
-        startBtn.setText("Start");
-        startBtn.setTextAlignment(javafx.scene.text.TextAlignment.RIGHT);
-        FlowPane.setMargin(startBtn, new Insets(20.0, 0.0, 0.0, 200.0));
-        startBtn.setFont(new Font(26.0));
-        startBtn.setCursor(Cursor.HAND);
-        setBottom(flowPane);
-
-        categoryAxis.setSide(javafx.geometry.Side.BOTTOM);
-
-        numberAxis.setSide(javafx.geometry.Side.LEFT);
-        BorderPane.setAlignment(playersChart, javafx.geometry.Pos.CENTER);
+        numberAxis.setLabel("Number of Players");
+        numberAxis.setTickLabelFill(Color.web("#333333"));
+        categoryAxis.setTickLabelFill(Color.web("#333333"));
         playersChart.setTitle("Players in the Server");
+        playersChart.setTitleSide(javafx.geometry.Side.TOP);
+
+        // Initialize chart series
+        XYChart.Series<String, Number> series1 = createSeries("Offline", 0);
+        XYChart.Series<String, Number> series2 = createSeries("In-Game", 0);
+        XYChart.Series<String, Number> series3 = createSeries("Online", 0);
+        playersChart.getData().addAll(series1, series2, series3);
+        playersChart.setBarGap(5);
+        playersChart.setCategoryGap(20);
+    }
+
+    private void setButtonActions(Stage stage) {
+        // Set button actions
+        startButton.setOnAction(this::handleStartStopAction);
+        stage.setOnCloseRequest(event -> stopServer());
+    }
+
+    private void setupLayout(Stage stage) {
+        // Layout setup
+        VBox topContainer = new VBox(10, titleLabel, ipAddressLabel);
+        topContainer.setAlignment(javafx.geometry.Pos.CENTER);
+        VBox statusContainer = new VBox(5, onlinePlayersLabel, offlinePlayersLabel, inGamePlayersLabel);
+        statusContainer.setAlignment(javafx.geometry.Pos.TOP_LEFT);
+        statusContainer.setPadding(new Insets(10));
+        VBox topLeftContainer = new VBox(topContainer, statusContainer);
+        topLeftContainer.setAlignment(javafx.geometry.Pos.TOP_LEFT);
+        setTop(topLeftContainer);
         setCenter(playersChart);
+        actionPane.getChildren().add(startButton);
+        setBottom(actionPane);
+        actionPane.setAlignment(javafx.geometry.Pos.CENTER);
+        actionPane.setPadding(new Insets(20));
+    }
 
-        stage.setOnCloseRequest(event -> {
-            try {
-                if (serverSocket != null && !serverSocket.isClosed()) {
-                    serverSocket.close();
-                }
-            } catch (IOException ex) {
-                System.out.println("To do in the setOncloseReqest");
+    private void handleStartStopAction(ActionEvent event) {
+        if (!startFlag) {
+            startServer();
+        } else {
+            stopServer();
+        }
+    }
+
+    private void startServer() {
+        updateUI();
+
+        startFlag = true;
+        startButton.setText("Stop");
+        executorService = Executors.newFixedThreadPool(THREAD_POOL_SIZE);
+        new Thread(this::runServer).start();
+
+    }
+
+    private void stopServer() {
+        try {
+            startButton.setText("Start");
+            startFlag = false;
+            logOutAllPlayers();
+            sendJsonToAllPlayers();
+            PlayerHandler.clearOnlinePlayers();
+            for (PlayerHandler player : players) {
+                player.stop();
             }
-            // Optional: Add additional cleanup code here
+            for (Socket socket : onlinePlayers.values()) {
+                if (socket != null && !socket.isClosed()) {
+                    socket.close();
+                }
+            }
+            if (serverSocket != null && !serverSocket.isClosed()) {
+                serverSocket.close();
+            }
+            resetGraph(); // Call updateUI directly
+
+        } catch (IOException ex) {
+            System.err.println("Error stopping server: " + ex.getMessage());
+        }
+    }
+
+    private void runServer() {
+        try {
+            serverSocket = new ServerSocket(SERVER_PORT);
+            while (startFlag) {
+                Socket clientSocket = serverSocket.accept();
+                System.out.println("New Client");
+                PlayerHandler playerHandler = new PlayerHandler(clientSocket, this);
+                players.add(playerHandler);
+                executorService.execute(playerHandler);
+                // Update UI after handling a new client
+                Platform.runLater(this::updateUI);
+            }
+        } catch (IOException ex) {
+            if (startFlag) {
+                System.err.println("Server error: " + ex.getMessage());
+            }
+        }
+    }
+
+    // Method to reset the graph
+    public void resetGraph() {
+        Platform.runLater(() -> {
+            playersChart.getData().clear();
+            XYChart.Series<String, Number> series1 = createSeries("Offline", 0);
+            XYChart.Series<String, Number> series2 = createSeries("In-Game", 0);
+            XYChart.Series<String, Number> series3 = createSeries("Online", 0);
+            playersChart.getData().addAll(series1, series2, series3);
+            onlinePlayersLabel.setText("Online Players: 0");
+            offlinePlayersLabel.setText("Offline Players: 0");
+            inGamePlayersLabel.setText("In-Game Players: 0");
         });
+    }
 
-        flowPane.getChildren().add(startBtn);
-        startBtn.addEventFilter(ActionEvent.ACTION, (event) -> {
-            if (!startFlag) {
-                startFlag = true;
-                startBtn.setText("Stop");
-                new Thread(() -> {
-                    try {
-                        serverSocket = new ServerSocket(5006);
-                        while (startFlag) {
-                            Socket s = serverSocket.accept();
-                            System.out.println("New Client");
-                            new PlayerHandler(s);
-                            Platform.runLater(() -> {
-                                // Your UI update logic here
-                                //label.setText("New client connected: " + s.getInetAddress().getHostAddress());
-                                updateChart();
-                            });
-                        }
-
-                    } catch (Exception ex) {
-                        System.out.println("Socket Stopped");
-                        //ex.printStackTrace();
-                    }
-
-                }).start();
-
-            } else {
-                try {
-                    startBtn.setText("Start");
-                    startFlag = false;
-                    serverSocket.close();
-                } catch (Exception ex) {
-                    System.out.println("Application Closed");
-                }
+    public void updateUI() {
+        // Ensure that the UI updates occur on the JavaFX Application Thread
+        Platform.runLater(() -> {
+            try {
+                updateChart();
+                updateLabels();
+            } catch (Exception e) {
+                e.printStackTrace();
             }
-
         });
     }
 
     private void updateChart() {
-        playersInGame = PlayerDAO.getIngameNumber();
-        playersOffline = PlayerDAO.getOfflineNumber();
-        playersOnline = PlayerDAO.getOnlineNumber();
-        XYChart.Series<String, Number> series1 = new XYChart.Series<>();
-        series1.setName("Offline");
-        series1.getData().add(new XYChart.Data<>("online", 0));
-        series1.getData().add(new XYChart.Data<>("offline", playersOffline));
-        series1.getData().add(new XYChart.Data<>("in a game", 0));
+        System.out.println("Updating chart: Offline = " + PlayerDAO.getOfflineNumber() + ", In-Game = " + PlayerDAO.getIngameNumber() + ", Online = " + PlayerDAO.getOnlineNumber());
 
-        XYChart.Series<String, Number> series2 = new XYChart.Series<>();
-        series2.setName("In a game");
-        series2.getData().add(new XYChart.Data<>("online", 0));
-        series2.getData().add(new XYChart.Data<>("offline", playersInGame));
-        series2.getData().add(new XYChart.Data<>("in a game", 0));
-
-        XYChart.Series<String, Number> series3 = new XYChart.Series<>();
-        series3.setName("Online");
-        series3.getData().add(new XYChart.Data<>("online", 0));
-        series3.getData().add(new XYChart.Data<>("offline", playersOnline));
-        series3.getData().add(new XYChart.Data<>("in a game", 0));
-
-        playersChart.getData().clear();
-        playersChart.getData().addAll(series1, series2, series3);
+        Platform.runLater(() -> {
+            playersChart.getData().clear();
+            XYChart.Series<String, Number> offlineSeries = createSeries("Offline", PlayerDAO.getOfflineNumber());
+            XYChart.Series<String, Number> inGameSeries = createSeries("In-Game", PlayerDAO.getIngameNumber());
+            XYChart.Series<String, Number> onlineSeries = createSeries("Online", PlayerDAO.getOnlineNumber());
+            playersChart.getData().addAll(offlineSeries, inGameSeries, onlineSeries);
+        });
     }
-    
+
+    private XYChart.Series<String, Number> createSeries(String name, int count) {
+        XYChart.Series<String, Number> series = new XYChart.Series<>();
+        series.setName(name);
+        series.getData().add(new XYChart.Data<>(name, count));
+        return series;
+    }
+
+    private void updateLabels() {
+        System.out.println("Updating Labels: Offline = " + PlayerDAO.getOfflineNumber() + ", In-Game = " + PlayerDAO.getIngameNumber() + ", Online = " + PlayerDAO.getOnlineNumber());
+
+        Platform.runLater(() -> {
+            onlinePlayersLabel.setText("Online Players: " + PlayerDAO.getOnlineNumber());
+            offlinePlayersLabel.setText("Offline Players: " + PlayerDAO.getOfflineNumber());
+            inGamePlayersLabel.setText("In-Game Players: " + PlayerDAO.getIngameNumber());
+        });
+    }
+
     private String getLocalIPAddress() {
         try {
             InetAddress localHost = InetAddress.getLocalHost();
             return localHost.getHostAddress();
         } catch (Exception e) {
             return "Unable to retrieve IP address";
+        }
+    }
+
+    private static void sendJsonToAllPlayers() {
+        Gson gson = new Gson();
+        System.out.println("Server down");
+        Map<String, Socket> snapshot = new ConcurrentHashMap<>(onlinePlayers);
+        for (Map.Entry<String, Socket> entry : snapshot.entrySet()) {
+            Socket socket = entry.getValue();
+            try (BufferedWriter bw = new BufferedWriter(new OutputStreamWriter(socket.getOutputStream()))) {
+                System.out.println("Sending JSON to player: " + entry.getKey());
+                String jsonResponse = gson.toJson(new Response(false, "Server is Down", null));
+                bw.write(jsonResponse);
+                bw.newLine();
+                bw.flush();
+            } catch (IOException ex) {
+                System.err.println("Error sending message to player " + entry.getKey() + ": " + ex.getMessage());
+                onlinePlayers.remove(entry.getKey());
+            }
         }
     }
 }
