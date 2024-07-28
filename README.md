@@ -12,6 +12,7 @@ CREATE TABLE users (
 and downlaod required libraries:
 
 json-simple-1.1.1.jar
+
 gson-2.1.1.jar
 
 With this server you can clone the following repo and play with you friends 
