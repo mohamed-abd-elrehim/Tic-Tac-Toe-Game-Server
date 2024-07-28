@@ -29,7 +29,7 @@ public class PlayerHandler extends Thread {
     private final Gson gson;
     private final Socket cs;
     static Map<String, Socket> onlinePlayers = new ConcurrentHashMap<>();
-    private final FXMLDocumentBase fxmlDocumentBase; // Add this line
+    private final FXMLDocumentBase fxmlDocumentBase;
 
     public PlayerHandler(Socket cs, FXMLDocumentBase fxmlDocumentBase) throws IOException {
         this.cs = cs;
@@ -38,7 +38,6 @@ public class PlayerHandler extends Thread {
         this.gson = new Gson();
         this.fxmlDocumentBase = fxmlDocumentBase;
         fxmlDocumentBase.updateUI();
-
     }
 
     @Override
@@ -52,18 +51,17 @@ public class PlayerHandler extends Thread {
                 pw.println(responseJson);
             }
         } catch (SocketException e) {
-            // This handles cases where the socket connection is forcibly closed
-            LOGGER.log(Level.WARNING, "Connection reset by client", e);
+
+            System.out.println("connection reset by client");
         } catch (IOException e) {
-            // This handles general I/O exceptions
-            LOGGER.log(Level.SEVERE, "I/O error in player handler", e);
+
+            System.out.println("I/O error in player handler");
         } catch (JsonSyntaxException e) {
-            // This handles JSON parsing errors
+
             LOGGER.log(Level.SEVERE, "Error parsing JSON", e);
         } finally {
             closeResources();
             fxmlDocumentBase.updateUI();
-
         }
     }
 
@@ -99,10 +97,13 @@ public class PlayerHandler extends Thread {
                 return getPlayersStatus(request);
             case "wanttoplay":
                 return sendRequestToPlayer(request);
-            case "accept":
+            case "yes":
+            case "no":
                 return getOtherPlayerResponse(request);
             case "move":
                 return sendMove(request);
+            case "resign":
+                return sendResignRequest(request);
             case "updatescore":
                 return updateScore(request);
             default:
@@ -110,25 +111,47 @@ public class PlayerHandler extends Thread {
         }
     }
 
+    private Response sendResignRequest(Player request) {
+        BufferedWriter bwToPlayer = null;
+        String player2;
+        try {
+            player2 = request.getUserName();
+            bwToPlayer = new BufferedWriter(new OutputStreamWriter(onlinePlayers.get(player2).getOutputStream()));
+            String responseJson = gson.toJson(new Response(true, player2 + "vresigned", null));
+            bwToPlayer.write(responseJson);
+            bwToPlayer.newLine();
+            bwToPlayer.flush();
+        } catch (IOException ex) {
+            Logger.getLogger(PlayerHandler.class.getName()).log(Level.SEVERE, null, ex);
+            return new Response(false, "Failed to send resign request", null);
+        }
+        return new Response(true, player2+" has won", null);
+
+    }
+
     private Response sendMove(Player request) {
-        PrintWriter pwToplayer2 = null;
+        BufferedWriter bwToPlayer = null;
         try {
             String player2 = request.getUserName();
-            pwToplayer2 = new PrintWriter(onlinePlayers.get(player2).getOutputStream(), true);
-            pwToplayer2.write(request.getMessage());
+            bwToPlayer = new BufferedWriter(new OutputStreamWriter(onlinePlayers.get(player2).getOutputStream()));
+            System.out.println(player2);
+            Response response = new Response(true, "move" + request.getMessage(), null);
+            String responseJson = gson.toJson(new Response(true, "move" + request.getMessage(), null));
+            System.out.println(response.toString());
+            System.out.println("Player 1 played "+request.getMessage()+" to "+request.getUserName());
+            bwToPlayer.write(responseJson);
+            bwToPlayer.newLine();
+            bwToPlayer.flush();
         } catch (IOException ex) {
             Logger.getLogger(PlayerHandler.class.getName()).log(Level.SEVERE, null, ex);
             return new Response(false, "Failed to send move", null);
-        } finally {
-            if (pwToplayer2 != null) {
-                pwToplayer2.close();
-            }
         }
         return new Response(true, "Player2 received your move", null);
     }
 
     private Response updateScore(Player request) {
         if (PlayerDAO.isPointsUpdated(request)) {
+            PlayerDAO.updateStatus(request, Status.ONLINE);
             return new Response(true, "Your points have been updated", null);
         } else {
             return new Response(false, "Points update failed", null);
@@ -136,42 +159,67 @@ public class PlayerHandler extends Thread {
     }
 
     private Response sendRequestToPlayer(Player request) {
-        
-        System.out.println("1");
-        PrintWriter pwToplayer2 = null;
-        System.out.println("Inside getplayer");
+        BufferedWriter bwToPlayer2 = null;
+        System.out.println("Inside send request method ");
+        String player2;
         try {
             Player p = new Player();
             String player1 = request.getUserName();
             p.setUserName(player1);
-            String player2 = request.getMessage();
-            pwToplayer2 = new PrintWriter(onlinePlayers.get(player2).getOutputStream(), true);
-            String responseJson = gson.toJson(new Response(true, player2, p));
-            pwToplayer2.write(responseJson);
+            player2 = request.getMessage();
+            bwToPlayer2 = new BufferedWriter(new OutputStreamWriter(onlinePlayers.get(player2).getOutputStream()));
+            //System.out.println("P2 Socket " + String.valueOf(onlinePlayers.get(player2)) + "P1 Socket " + String.valueOf(onlinePlayers.get(player1)));
+            String responseJson = gson.toJson(new Response(true, player1 + " wants to play with you", null));
+            //System.out.println(responseJson);
+            bwToPlayer2.write(responseJson);
+            bwToPlayer2.newLine();
+            bwToPlayer2.flush();
         } catch (IOException ex) {
             Logger.getLogger(PlayerHandler.class.getName()).log(Level.SEVERE, null, ex);
             return new Response(false, "Failed to get player response", null);
         }
+        //System.out.println("This socket = " + onlinePlayers.get(player2));
         return new Response(true, "Player2 received your message", null);
     }
 
     private Response getOtherPlayerResponse(Player request) {
-        PrintWriter pwToplayer2 = null;
-        //System.out.println("Inside getplayer");
+        BufferedWriter bwToPlayer = null;
+        String player2;
+        String player1;
+        System.out.println("in getOtherPlayerResponse method");
         try {
-            Player p = new Player();
-            String player1 = request.getUserName();
-            p.setUserName(player1);
-            String player2 = request.getMessage();
-            pwToplayer2 = new PrintWriter(onlinePlayers.get(player2).getOutputStream(), true);
-            String responseJson = gson.toJson(new Response(true, "Start Game", p));
-            pwToplayer2.write(responseJson);
+            Player p1 = new Player();
+            Player p2 = new Player();
+            player1 = request.getUserName();
+            p1.setUserName(player1);
+            player2 = request.getMessage();
+            p2.setUserName(player2);
+            bwToPlayer = new BufferedWriter(new OutputStreamWriter(onlinePlayers.get(player2).getOutputStream()));
+
+            String responseJson;
+            if (request.getAction().equals("yes")) {
+                PlayerDAO.updateStatus(p1, Status.INGAME);
+                PlayerDAO.updateStatus(p2, Status.INGAME);
+                responseJson = gson.toJson(new Response(true, player1 + ": start game", p1));
+            } else {
+                responseJson = gson.toJson(new Response(false, player1 + " is busy", p1));
+            }
+            System.out.println(responseJson);
+            bwToPlayer.write(responseJson);
+            bwToPlayer.newLine();
+            bwToPlayer.flush();
         } catch (IOException ex) {
             Logger.getLogger(PlayerHandler.class.getName()).log(Level.SEVERE, null, ex);
             return new Response(false, "Failed to get player response", null);
         }
-        return new Response(true, "Start Game", null);
 
+        if (request.getAction().equals("yes")) {
+            //System.out.println("response is no");
+            return new Response(true, player2 + ": start game", null);
+
+        } else {
+            return new Response(false, "Game request decliened", null);
+        }
     }
 
     private Response registerPlayer(Player player) {
@@ -190,15 +238,16 @@ public class PlayerHandler extends Thread {
     }
 
     private Response loginPlayer(Player player) {
-        printOnlinePlayers();
-        // Check if the player is already logged in
+        //printOnlinePlayers();
+        fxmlDocumentBase.updateUI();
+
         if (isPlayerInMap(player.getUserName())) {
             System.out.println("Player " + player.getUserName() + " is already logged in.");
             return new Response(false, "Player is already logged in", player);
         } else {
 
             boolean loginSuccess = PlayerDAO.isUserLoggedin(player);
-            System.out.println(player.toString());
+            //System.out.println(player.toString());
             if (loginSuccess) {
                 addToMap(player.getUserName(), cs);
                 System.out.println("Login Successful");
@@ -209,20 +258,9 @@ public class PlayerHandler extends Thread {
             }
         }
     }
-//    private Response loginPlayer(Player player) {
-//        boolean loginSuccess = PlayerDAO.isUserLoggedin(player);
-//        System.out.println(player.toString());
-//        if (loginSuccess) {
-//            addToMap(player.getUserName(), cs);
-//            System.out.println("Login Successful");
-//            return new Response(true, "Login successful", player);
-//        } else {
-//            System.out.println("Login failed");
-//            return new Response(false, "Login failed", player);
-//        }
-//    }
 
     private Response logoutPlayer(Player player) {
+        fxmlDocumentBase.updateUI();
         boolean logoutSuccess = PlayerDAO.isStatusUpdated(player, Status.OFFLINE);
         if (logoutSuccess) {
             Response temp = new Response(true, "Logout successful", player);
@@ -234,24 +272,11 @@ public class PlayerHandler extends Thread {
     }
 
     private InOnlineResponse getPlayersStatus(Player player) {
-        System.out.println("Received request for 'gamelobby' action.");
-
-        InOnlineResponse onlineResponse = new InOnlineResponse(true, "Players Status sent successfully", new ArrayList<>());
-
-        // Debug statement to check if players are being added correctly
+        InOnlineResponse onlineResponse = new InOnlineResponse(true, "player List", new ArrayList<>());
         addOnlinePlayers(onlineResponse, player);
-
-        // Check if `addOnlinePlayers` correctly populates the response
-        System.out.println("Online players response: " + onlineResponse);
-
         return onlineResponse;
     }
 
-//    private InOnlineResponse getPlayersStatus(Player player) {
-//        InOnlineResponse onlineResponse = new InOnlineResponse(true, "Players Status sent successfully", new ArrayList<>());
-//        addOnlinePlayers(onlineResponse, player);
-//        return onlineResponse;
-//    }
     private void addOnlinePlayers(InOnlineResponse onlineResponse, Player player) {
         try {
             ResultSet rs = PlayerDAO.selectOnline();
@@ -265,6 +290,7 @@ public class PlayerHandler extends Thread {
                 p.setPoints(rs.getInt("POINTS"));
                 p.setStatus(Status.valueOf(rs.getString("STATUS")));
                 onlineResponse.getPlayers().add(p);
+                onlineResponse.toString();
             }
         } catch (SQLException ex) {
             Logger.getLogger(PlayerHandler.class.getName()).log(Level.SEVERE, null, ex);
@@ -295,37 +321,45 @@ public class PlayerHandler extends Thread {
         onlinePlayers.put(username, socket);
     }
 
-    public boolean isPlayerInMap(String username) {
-        // Corrected to check if the player is in the map
-        return onlinePlayers.containsKey(username);
-    }
-
     public static void sendJsonToAllPlayers() {
         Gson gson = new Gson();
         System.out.println("Server down");
 
-        // Create a copy of the entries to avoid concurrent modification issues
         Map<String, Socket> snapshot = new ConcurrentHashMap<>(onlinePlayers);
 
         for (Map.Entry<String, Socket> entry : snapshot.entrySet()) {
             Socket socket = entry.getValue();
             try (
-                    PrintWriter pw = new PrintWriter(socket.getOutputStream(), true);
                     BufferedWriter bw = new BufferedWriter(new OutputStreamWriter(socket.getOutputStream()))) {
-                System.out.println("Sending JSON to player: " + entry.getKey());
+                //System.out.println("Sending JSON to player: " + entry.getKey());
                 String jsonResponse = gson.toJson(new Response(false, "Server is Down", null));
-                pw.println(jsonResponse);
+                //pw.println(jsonResponse);
                 bw.write(jsonResponse);
-                bw.newLine(); // Ensure the message is properly terminated
+                bw.newLine();
                 bw.flush();
             } catch (IOException ex) {
                 System.err.println("Error sending message to player " + entry.getKey() + ": " + ex.getMessage());
-                // Optionally remove the socket from the map if it fails to send
+
                 onlinePlayers.remove(entry.getKey());
             }
         }
     }
 
+//    public static void printOnlinePlayers() {
+//        for (Map.Entry<String, Socket> entry : onlinePlayers.entrySet()) {
+//            System.out.println("Player: " + entry.getKey() + " " + entry.getValue());
+//        }
+//    }
+    public static void clearOnlinePlayers() {
+        onlinePlayers.clear();
+    }
+
+    public boolean isPlayerInMap(String username) {
+        // Corrected to check if the player is in the map
+        return onlinePlayers.containsKey(username);
+    }
+
+}
 //    public void close() {
 //        running = false;
 //        try {
@@ -342,13 +376,30 @@ public class PlayerHandler extends Thread {
 //            Logger.getLogger(PlayerHandler.class.getName()).log(Level.SEVERE, null, ex);
 //        }
 //    }
-    public static void printOnlinePlayers() {
-        for (Map.Entry<String, Socket> entry : onlinePlayers.entrySet()) {
-            System.out.println("Player: " + entry.getKey() + " " + entry.getValue());
-        }
-    }
 
-    public static void clearOnlinePlayers() {
-        onlinePlayers.clear();
-    }
-}
+//    private void addOnlinePlayers(InOnlineResponse onlineResponse, Player player) {
+//        try {
+//            System.out.println("Requesting player: " + player.userName);
+//            ResultSet rs = PlayerDAO.selectOnline();
+//            while (rs.next()) {
+//                String currentUsername = rs.getString("USERNAME").trim();
+//                System.out.println("Checking player: " + currentUsername);
+//
+//                if (currentUsername.equalsIgnoreCase(player.userName.trim())) {
+//                    System.out.println("Skipping player: " + player.userName);
+//                    continue;
+//                }
+//
+//                Player p = new Player();
+//                p.setId(rs.getInt("ID"));
+//                p.setUserName(currentUsername);
+//                p.setPoints(rs.getInt("POINTS"));
+//                p.setStatus(Status.valueOf(rs.getString("STATUS")));
+//                onlineResponse.getPlayers().add(p);
+//            }
+//        } catch (SQLException ex) {
+//            Logger.getLogger(PlayerHandler.class.getName()).log(Level.SEVERE, null, ex);
+//            onlineResponse.setStatus(false);
+//            onlineResponse.setMessage("Failed to retrieve players status");
+//        }
+//    }

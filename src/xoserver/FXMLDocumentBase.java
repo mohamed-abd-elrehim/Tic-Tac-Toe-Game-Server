@@ -31,6 +31,7 @@ import javafx.scene.text.Font;
 import javafx.stage.Stage;
 import static xoserver.PlayerDAO.logOutAllPlayers;
 import static xoserver.PlayerHandler.onlinePlayers;
+import static xoserver.PlayerHandler.sendJsonToAllPlayers;
 
 public class FXMLDocumentBase extends BorderPane {
 
@@ -74,6 +75,7 @@ public class FXMLDocumentBase extends BorderPane {
 
         // Layout setup
         setupLayout(stage);
+
     }
 
     private void styleUIComponents() {
@@ -84,12 +86,11 @@ public class FXMLDocumentBase extends BorderPane {
         ipAddressLabel.setFont(new Font("Arial", 16.0));
         ipAddressLabel.setTextFill(Color.web("#666666"));
 
-        // Button styles
+        
         startButton.setStyle("-fx-background-color: #4CAF50; -fx-text-fill: white; -fx-font-size: 16px; -fx-padding: 10px; -fx-border-radius: 5px;");
         startButton.setOnMouseEntered(event -> startButton.setStyle("-fx-background-color: #45a049; -fx-text-fill: white; -fx-font-size: 16px; -fx-padding: 10px; -fx-border-radius: 5px;"));
         startButton.setOnMouseExited(event -> startButton.setStyle("-fx-background-color: #4CAF50; -fx-text-fill: white; -fx-font-size: 16px; -fx-padding: 10px; -fx-border-radius: 5px;"));
 
-        // Chart setup
         categoryAxis.setLabel("Status");
         numberAxis.setLabel("Number of Players");
         numberAxis.setTickLabelFill(Color.web("#333333"));
@@ -107,13 +108,15 @@ public class FXMLDocumentBase extends BorderPane {
     }
 
     private void setButtonActions(Stage stage) {
-        // Set button actions
         startButton.setOnAction(this::handleStartStopAction);
-        stage.setOnCloseRequest(event -> stopServer());
+        stage.setOnCloseRequest(event -> {
+            stopServer();
+            System.exit(0); 
+        });
     }
 
     private void setupLayout(Stage stage) {
-        // Layout setup
+
         VBox topContainer = new VBox(10, titleLabel, ipAddressLabel);
         topContainer.setAlignment(javafx.geometry.Pos.CENTER);
         VBox statusContainer = new VBox(5, onlinePlayersLabel, offlinePlayersLabel, inGamePlayersLabel);
@@ -165,7 +168,7 @@ public class FXMLDocumentBase extends BorderPane {
             if (serverSocket != null && !serverSocket.isClosed()) {
                 serverSocket.close();
             }
-            resetGraph(); // Call updateUI directly
+            resetGraph(); 
 
         } catch (IOException ex) {
             System.err.println("Error stopping server: " + ex.getMessage());
@@ -177,7 +180,6 @@ public class FXMLDocumentBase extends BorderPane {
             serverSocket = new ServerSocket(SERVER_PORT);
             while (startFlag) {
                 Socket clientSocket = serverSocket.accept();
-                System.out.println("New Client");
                 PlayerHandler playerHandler = new PlayerHandler(clientSocket, this);
                 players.add(playerHandler);
                 executorService.execute(playerHandler);
@@ -206,7 +208,6 @@ public class FXMLDocumentBase extends BorderPane {
     }
 
     public void updateUI() {
-        // Ensure that the UI updates occur on the JavaFX Application Thread
         Platform.runLater(() -> {
             try {
                 updateChart();
@@ -218,8 +219,7 @@ public class FXMLDocumentBase extends BorderPane {
     }
 
     private void updateChart() {
-        System.out.println("Updating chart: Offline = " + PlayerDAO.getOfflineNumber() + ", In-Game = " + PlayerDAO.getIngameNumber() + ", Online = " + PlayerDAO.getOnlineNumber());
-
+        
         Platform.runLater(() -> {
             playersChart.getData().clear();
             XYChart.Series<String, Number> offlineSeries = createSeries("Offline", PlayerDAO.getOfflineNumber());
@@ -237,8 +237,7 @@ public class FXMLDocumentBase extends BorderPane {
     }
 
     private void updateLabels() {
-        System.out.println("Updating Labels: Offline = " + PlayerDAO.getOfflineNumber() + ", In-Game = " + PlayerDAO.getIngameNumber() + ", Online = " + PlayerDAO.getOnlineNumber());
-
+        
         Platform.runLater(() -> {
             onlinePlayersLabel.setText("Online Players: " + PlayerDAO.getOnlineNumber());
             offlinePlayersLabel.setText("Offline Players: " + PlayerDAO.getOfflineNumber());
@@ -255,22 +254,4 @@ public class FXMLDocumentBase extends BorderPane {
         }
     }
 
-    private static void sendJsonToAllPlayers() {
-        Gson gson = new Gson();
-        System.out.println("Server down");
-        Map<String, Socket> snapshot = new ConcurrentHashMap<>(onlinePlayers);
-        for (Map.Entry<String, Socket> entry : snapshot.entrySet()) {
-            Socket socket = entry.getValue();
-            try (BufferedWriter bw = new BufferedWriter(new OutputStreamWriter(socket.getOutputStream()))) {
-                System.out.println("Sending JSON to player: " + entry.getKey());
-                String jsonResponse = gson.toJson(new Response(false, "Server is Down", null));
-                bw.write(jsonResponse);
-                bw.newLine();
-                bw.flush();
-            } catch (IOException ex) {
-                System.err.println("Error sending message to player " + entry.getKey() + ": " + ex.getMessage());
-                onlinePlayers.remove(entry.getKey());
-            }
-        }
-    }
 }

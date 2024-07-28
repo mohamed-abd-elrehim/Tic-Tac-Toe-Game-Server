@@ -45,7 +45,7 @@ public class PlayerDAO {
         }
     }
 
-    static synchronized boolean delete(Player p) {
+    static boolean delete(Player p) {
         try {
 
             PreparedStatement pst = con.prepareStatement("delete from PLAYER where ID = ?");
@@ -63,7 +63,7 @@ public class PlayerDAO {
         return isDone;
     }
 
-    static synchronized boolean insert(Player p) {
+    static boolean insert(Player p) {
         try {
             //int result;
             PreparedStatement pst = con.prepareStatement("INSERT INTO PLAYER (userName, status, password, points) VALUES (?, ?, ?, ?)");
@@ -85,7 +85,7 @@ public class PlayerDAO {
         return isDone;
     }
 
-    static synchronized boolean update(Player p) {
+    static boolean update(Player p) {
         try {
             PreparedStatement pst = con.prepareStatement("UPDATE PLAYER SET USERNAME = ?, STATUS = ?, PASSWORD = ?, POINTS = ? WHERE ID = ?");
             pst.setString(1, p.userName);
@@ -106,7 +106,7 @@ public class PlayerDAO {
         return isDone;
     }
 
-    static synchronized ResultSet selectInGame() {
+    static ResultSet selectInGame() {
         try {
             PreparedStatement pst = con.prepareStatement("SELECT * FROM PLAYER where STATUS = ?", ResultSet.TYPE_SCROLL_INSENSITIVE, ResultSet.CONCUR_READ_ONLY);
             pst.setString(1, "INGAME");
@@ -119,7 +119,7 @@ public class PlayerDAO {
 
     }
 
-    static synchronized ResultSet selectOnline() {
+    static ResultSet selectOnline() {
         try {
             PreparedStatement pst = con.prepareStatement("SELECT * FROM PLAYER where STATUS = ?", ResultSet.TYPE_SCROLL_INSENSITIVE, ResultSet.CONCUR_READ_ONLY);
             pst.setString(1, "ONLINE");
@@ -132,7 +132,7 @@ public class PlayerDAO {
 
     }
 
-    static synchronized ResultSet selectOffline() {
+    static ResultSet selectOffline() {
         try {
             PreparedStatement pst = con.prepareStatement("SELECT * FROM PLAYER where STATUS = ?", ResultSet.TYPE_SCROLL_INSENSITIVE, ResultSet.CONCUR_READ_ONLY);
             pst.setString(1, "OFFLINE");
@@ -145,7 +145,7 @@ public class PlayerDAO {
 
     }
 
-    static synchronized ResultSet selectAll() {
+    static ResultSet selectAll() {
         try {
             PreparedStatement pst = con.prepareStatement("SELECT * FROM PLAYER", ResultSet.TYPE_SCROLL_INSENSITIVE, ResultSet.CONCUR_READ_ONLY);
 
@@ -156,7 +156,7 @@ public class PlayerDAO {
         return rs;
     }
 
-    static synchronized ResultSet select(Player p) {
+    static ResultSet select(Player p) {
         try {
             PreparedStatement pst = con.prepareStatement("SELECT * FROM PLAYER where id = ?", ResultSet.TYPE_SCROLL_INSENSITIVE, ResultSet.CONCUR_READ_ONLY);
             pst.setInt(1, p.id);
@@ -168,13 +168,13 @@ public class PlayerDAO {
         return rs;
     }
 
-    static synchronized int updateStatus(Player p, Status status) {
+    static int updateStatus(Player p, Status status) {
         try {
             PreparedStatement pst
-                    = con.prepareStatement("UPDATE PLAYER SET STATUS = ? WHERE ID = ?");
+                    = con.prepareStatement("UPDATE PLAYER SET STATUS = ? WHERE USERNAME = ?");
 
             pst.setString(1, String.valueOf(status));
-            pst.setInt(2, p.id);
+            pst.setString(2, p.userName);
             result = pst.executeUpdate();
 
         } catch (SQLException ex) {
@@ -183,7 +183,7 @@ public class PlayerDAO {
         return result;
     }
 
-    static synchronized boolean isStatusUpdated(Player p, Status status) {
+    static boolean isStatusUpdated(Player p, Status status) {
         int updateResult = updateStatus(p, status);
         if (updateResult <= 0) {
             return false;
@@ -193,7 +193,7 @@ public class PlayerDAO {
 
     }
 
-    static synchronized int updatePoints(Player p) {
+    static int updatePoints(Player p) {
         try {
             PreparedStatement pst
                     = con.prepareStatement("UPDATE PLAYER SET POINTS = ? WHERE ID = ?");
@@ -208,7 +208,7 @@ public class PlayerDAO {
         return result;
     }
 
-    static synchronized boolean isPointsUpdated(Player p) {
+    static boolean isPointsUpdated(Player p) {
         int updateResult = updatePoints(p);
         if (updateResult <= 0) {
             return false;
@@ -218,7 +218,7 @@ public class PlayerDAO {
 
     }
 
-    static synchronized boolean selectLogin(Player p) {
+    static boolean selectLogin(Player p) {
         boolean isLoggedIn = false;
         ResultSet rs = null;
         try {
@@ -235,6 +235,7 @@ public class PlayerDAO {
             } else {
                 //System.out.println("Username: " + rs.getString("USERNAME") + "  Password: " + rs.getString("PASSWORD"));
                 p.id = rs.getInt("ID");
+                p.userName = rs.getString("USERNAME");
                 p.points = rs.getInt("POINTS");
                 updateStatus(p, Status.ONLINE);
                 System.out.println(p.toString());
@@ -247,11 +248,11 @@ public class PlayerDAO {
         return isLoggedIn;
     }
 
-    static synchronized boolean isUserLoggedin(Player p) {
+    static boolean isUserLoggedin(Player p) {
         return selectLogin(p);
     }
 
-    static synchronized boolean isUserNameTaken(Player p) {
+    static boolean isUserNameTaken(Player p) {
         boolean isTaken = true;
         try {
             PreparedStatement pst = con.prepareStatement("SELECT * FROM PLAYER WHERE USERNAME = ?", ResultSet.TYPE_SCROLL_INSENSITIVE, ResultSet.CONCUR_READ_ONLY);
@@ -268,7 +269,7 @@ public class PlayerDAO {
         return isTaken;
     }
 
-    static synchronized int getIngameNumber() {
+    static int getIngameNumber() {
         int count = 0;
         try {
 
@@ -281,7 +282,7 @@ public class PlayerDAO {
                 count = -1;
             }
         } catch (SQLException ex) {
-            Logger.getLogger(PlayerDAO.class.getName()).log(Level.SEVERE, null, ex);
+            System.out.println("No inGame Players");
         }
 
         return count;
@@ -303,7 +304,7 @@ public class PlayerDAO {
 
             }
         } catch (SQLException ex) {
-            Logger.getLogger(PlayerDAO.class.getName()).log(Level.SEVERE, null, ex);
+            System.out.println("No offline Players");
         }
 
         return count;
@@ -325,25 +326,38 @@ public class PlayerDAO {
 
             }
         } catch (SQLException ex) {
-            Logger.getLogger(PlayerDAO.class.getName()).log(Level.SEVERE, null, ex);
+            System.out.println("No online Players");
         }
 
         return count;
     }
 
     static void logOutAllPlayers() {
-        try {
-            PreparedStatement pst = con.prepareStatement("SELECT * FROM player WHERE status = ?", ResultSet.TYPE_SCROLL_INSENSITIVE, ResultSet.CONCUR_READ_ONLY);
-            pst.setString(1, "ONLINE");
-            rs = pst.executeQuery();
-            while (rs.next()) {
-                 pst = con.prepareStatement("UPDATE PLAYER SET STATUS = ? WHERE ID = ?");
-                pst.setString(1, String.valueOf(Status.OFFLINE));
-                pst.setInt(2, rs.getInt("ID"));
-                result = pst.executeUpdate();
+        // Define the SQL queries
+        String selectQuery = "SELECT ID FROM player WHERE status = ? OR status = ?";
+        String updateQuery = "UPDATE PLAYER SET STATUS = ? WHERE ID = ?";
+
+        // Use try-with-resources for automatic resource management
+        try (PreparedStatement pstSelect = con.prepareStatement(selectQuery, ResultSet.TYPE_SCROLL_INSENSITIVE, ResultSet.CONCUR_READ_ONLY);
+                PreparedStatement pstUpdate = con.prepareStatement(updateQuery)) {
+
+            // Set parameters and execute the select query
+            pstSelect.setString(1, "ONLINE");
+            pstSelect.setString(2, "INGAME");
+            try (ResultSet rs = pstSelect.executeQuery()) {
+                // Iterate through the result set
+                while (rs.next()) {
+                    int playerId = rs.getInt("ID");
+
+                    // Update player status to OFFLINE
+                    pstUpdate.setString(1, String.valueOf(Status.OFFLINE));
+                    pstUpdate.setInt(2, playerId);
+                    pstUpdate.executeUpdate();
+                }
             }
+
         } catch (SQLException ex) {
-            Logger.getLogger(PlayerDAO.class.getName()).log(Level.SEVERE, null, ex);
+            Logger.getLogger(PlayerDAO.class.getName()).log(Level.SEVERE, "Error logging out players: ", ex);
         }
     }
 
