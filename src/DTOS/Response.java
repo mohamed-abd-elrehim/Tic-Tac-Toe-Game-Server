@@ -5,29 +5,51 @@
  */
 package DTOS;
 
+import java.io.Serializable;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+
 /**
  *
  * @author COMPUMARTS
  */
 
-public class Response {
-    public boolean isDone;
-    public String message;
-    public Player player;
+public class Response implements Serializable{
 
+    private boolean isDone;
+    private String message;
+    private List<Player> players; 
+    private Player player; 
+
+
+    public Response(boolean isDone, String message) {
+        this(isDone, message, null, null);
+    }
+
+  
+    public Response(boolean isDone, String message, List<Player> players) {
+        this(isDone, message, players, null);
+    }
+   
     public Response(boolean isDone, String message, Player player) {
+        this(isDone, message, null, player);
+    }
+    
+    public Response(boolean isDone, String message, List<Player> players, Player player) {
         this.isDone = isDone;
         this.message = message;
+        this.players = players != null ? players : Collections.emptyList();
         this.player = player;
     }
 
     // Getters and Setters
-    public boolean  getStatus() {
+    public boolean isDone() {
         return isDone;
     }
 
-    public void setStatus(boolean isDone) {
-        this.isDone = isDone;
+    public void setDone(boolean done) {
+        this.isDone = done;
     }
 
     public String getMessage() {
@@ -36,6 +58,14 @@ public class Response {
 
     public void setMessage(String message) {
         this.message = message;
+    }
+
+    public List<Player> getPlayers() {
+        return players;
+    }
+
+    public void setPlayers(List<Player> players) {
+        this.players =  players != null ? players : Collections.emptyList();
     }
 
     public Player getPlayer() {
@@ -48,9 +78,10 @@ public class Response {
 
     @Override
     public String toString() {
-        return "Response{" +
-                "isDone='" + isDone + '\'' +
+        return "ServerResponse{" +
+                "isDone=" + isDone +
                 ", message='" + message + '\'' +
+                ", players=" + players +
                 ", player=" + player +
                 '}';
     }

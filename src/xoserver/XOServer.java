@@ -24,7 +24,6 @@ public class XOServer extends Application {
         Scene scene = new Scene(root);
         stage.setTitle("Tic Tac Toe Server");
         stage.setScene(scene);
-         stage.setFullScreen(!stage.isFullScreen());
         stage.show();
     }
 

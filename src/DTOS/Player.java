@@ -4,7 +4,7 @@ import enumstatus.EnumStatus.Status;
 
 /**
  * PlayerRequest class to encapsulate player data and requests.
- * 
+ *
  * Author: Mohammed
  */
 public class Player {
@@ -14,34 +14,18 @@ public class Player {
     public Status status;
     public String password;
     public int points;
-    public String action;
-    public String message;
 
-    /**
-     * Default constructor for Gson and other serialization tools.
-     */
+  
     public Player() {
     }
 
-    /**
-     * Parameterized constructor to initialize PlayerRequest with given values.
-     * 
-     * @param id        Player's unique identifier.
-     * @param userName  Player's username.
-     * @param status    Player's status (e.g., online, offline).
-     * @param password  Player's password.
-     * @param points    Player's accumulated points.
-     * @param action    Action requested by the player.
-     * @param message   Additional message or information.
-     */
-    public Player(int id, String userName, Status status, String password, int points, String action, String message) {
+    
+    public Player(int id, String userName, Status status, String password, int points) {
         this.id = id;
         this.userName = userName;
         this.status = status;
         this.password = password;
         this.points = points;
-        this.action = action;
-        this.message = message;
     }
 
     // Getter and Setter methods for id
@@ -89,34 +73,14 @@ public class Player {
         this.points = points;
     }
 
-    // Getter and Setter methods for action
-    public String getAction() {
-        return action;
-    }
-
-    public void setAction(String action) {
-        this.action = action;
-    }
-
-    // Getter and Setter methods for message
-    public String getMessage() {
-        return message;
-    }
-
-    public void setMessage(String message) {
-        this.message = message;
-    }
-
     @Override
     public String toString() {
-        return "PlayerRequest{" +
-                "id=" + id +
-                ", userName='" + userName + '\'' +
-                ", status=" + status +
-                ", password='" + password + '\'' +
-                ", points=" + points +
-                ", action='" + action + '\'' +
-                ", message='" + message + '\'' +
-                '}';
+        return "PlayerRequest{"
+                + "id=" + id
+                + ", userName='" + userName + '\''
+                + ", status=" + status
+                + ", password='" + password + '\''
+                + ", points=" + points
+                + '}';
     }
 }

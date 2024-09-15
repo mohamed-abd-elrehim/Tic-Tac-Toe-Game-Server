@@ -14,6 +14,8 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 import javafx.application.Platform;
 import javafx.event.ActionEvent;
 import javafx.geometry.Insets;
@@ -30,7 +32,7 @@ import javafx.scene.paint.Color;
 import javafx.scene.text.Font;
 import javafx.stage.Stage;
 import static xoserver.PlayerDAO.logOutAllPlayers;
-import static xoserver.PlayerHandler.onlinePlayers;
+//import static xoserver.PlayerHandler.onlinePlayers;
 import static xoserver.PlayerHandler.sendJsonToAllPlayers;
 
 public class FXMLDocumentBase extends BorderPane {
@@ -53,6 +55,7 @@ public class FXMLDocumentBase extends BorderPane {
     private final Label ipAddressLabel;
     private final FlowPane actionPane;
     private final Button startButton;
+    private final ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1);
 
     public FXMLDocumentBase(Stage stage) {
         // Initialize UI elements
@@ -77,6 +80,7 @@ public class FXMLDocumentBase extends BorderPane {
         setupLayout(stage);
 
     }
+  
 
     private void styleUIComponents() {
         // Styles for UI components
@@ -113,6 +117,16 @@ public class FXMLDocumentBase extends BorderPane {
             stopServer();
             System.exit(0); 
         });
+    }
+    
+     // Method to start periodic UI updates every 5 minutes
+    private void startPeriodicUIUpdate() {
+        scheduler.scheduleAtFixedRate(() -> {
+            Platform.runLater(() -> {
+                // UI update logic
+                Platform.runLater(this::updateUI);
+            });
+        }, 0, 5, TimeUnit.SECONDS);
     }
 
     private void setupLayout(Stage stage) {
@@ -156,20 +170,21 @@ public class FXMLDocumentBase extends BorderPane {
             startFlag = false;
             logOutAllPlayers();
             sendJsonToAllPlayers();
+            
             PlayerHandler.clearOnlinePlayers();
             for (PlayerHandler player : players) {
                 player.stop();
             }
-            for (Socket socket : onlinePlayers.values()) {
-                if (socket != null && !socket.isClosed()) {
-                    socket.close();
-                }
-            }
+//            for (Socket socket : onlinePlayers.values()) {
+//                if (socket != null && !socket.isClosed()) {
+//                    socket.close();
+//                }
+//            }
             if (serverSocket != null && !serverSocket.isClosed()) {
                 serverSocket.close();
             }
             resetGraph(); 
-
+            scheduler.shutdownNow();
         } catch (IOException ex) {
             System.err.println("Error stopping server: " + ex.getMessage());
         }
@@ -184,7 +199,7 @@ public class FXMLDocumentBase extends BorderPane {
                 players.add(playerHandler);
                 executorService.execute(playerHandler);
                 // Update UI after handling a new client
-                Platform.runLater(this::updateUI);
+                 startPeriodicUIUpdate();
             }
         } catch (IOException ex) {
             if (startFlag) {

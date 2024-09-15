@@ -269,6 +269,35 @@ public class PlayerDAO {
         return isTaken;
     }
 
+    static Player selectPlayerByUserName(String userName) {
+        Player player = null;
+        String query = "SELECT * FROM PLAYER WHERE USERNAME = ?";
+
+        try (PreparedStatement pst = con.prepareStatement(query, ResultSet.TYPE_SCROLL_INSENSITIVE, ResultSet.CONCUR_READ_ONLY)) {
+            pst.setString(1, userName.trim());
+
+            try (ResultSet rs = pst.executeQuery()) {
+                if (rs.next()) {
+                    // Create a Player object and populate it with data from the ResultSet
+                    player = new Player();
+
+                    player.id = rs.getInt("ID");
+                    player.userName = rs.getString("USERNAME");
+                    player.points = rs.getInt("POINTS");
+                    // Add other fields as needed based on your Player class
+                } else {
+                    // No player found with the given username
+                    player = null;
+                }
+            }
+        } catch (SQLException ex) {
+            Logger.getLogger(PlayerDAO.class.getName()).log(Level.SEVERE, "Database query failed", ex);
+            // Handle exception or rethrow it if needed
+        }
+
+        return player;
+    }
+
     static int getIngameNumber() {
         int count = 0;
         try {
